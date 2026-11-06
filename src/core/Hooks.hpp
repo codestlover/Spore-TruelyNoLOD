@@ -57,7 +57,8 @@ constexpr const char TerrainSetupBytes[] = "\xff\x05\x64\x9e\x6c\x01\x83\xec\x20
 constexpr uint32_t AppPropertiesAddress = 0x15fd918;
 constexpr uint32_t GetBoolAddress = 0x6a25a0, GetIntAddress = 0x6a2660, GetFloatAddress = 0x6a2710;
 constexpr uint32_t SetBoolAddress = 0x6a17e0, SetIntAddress = 0x6a1880, SetFloatAddress = 0x6a1910;
-constexpr uint32_t PlanetChunkResolution = 0xe8172372, PlanetQualityRange = 0x21, PlanetSeabed = 0x4badc321;
+constexpr uint32_t PlanetChunkResolution = 0xe8172372, PlanetQualityRange = 0x21, PlanetSeabed = 0x4badc321,
+                   PlanetReflections = 0xf1a9135a;
 constexpr uint32_t PlanetDetailLevel = 0x3ffad0a;
 constexpr int PlanetDetailHigh = 2;
 constexpr int PlanetChunkResolutionValue = 32;

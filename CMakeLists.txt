@@ -121,7 +121,32 @@ add_library(civ_detours STATIC "${DETOURS_SRC}/detours.cpp" "${DETOURS_SRC}/modu
   "${DETOURS_SRC}/disasm.cpp" "${DETOURS_SRC}/image.cpp" "${DETOURS_SRC}/creatwth.cpp")
 target_compile_definitions(civ_detours PRIVATE WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0601)
 target_compile_options(civ_detours PRIVATE /W1 /EHsc)
-add_library(TruelyNoLOD SHARED src/core/TruelyNoLOD.cpp src/core/Allocator.cpp)
+set(TRUELY_D3DCOMPILER "" CACHE FILEPATH "32-bit Microsoft d3dcompiler_47.dll used by the offline HLSL compiler")
+if(NOT EXISTS "${TRUELY_D3DCOMPILER}")
+  message(FATAL_ERROR "Set TRUELY_D3DCOMPILER to the 32-bit Microsoft d3dcompiler_47.dll")
+endif()
+find_program(TRUELY_WINE wine REQUIRED)
+add_executable(TruelyShaderCompiler src/shaders/ShaderCompiler.cpp)
+target_include_directories(TruelyShaderCompiler SYSTEM PRIVATE
+  "${CIV_MSVC_SDK}/crt/include" "${CIV_MSVC_SDK}/sdk/include/ucrt"
+  "${CIV_MSVC_SDK}/sdk/include/um" "${CIV_MSVC_SDK}/sdk/include/shared")
+target_link_directories(TruelyShaderCompiler PRIVATE "${CIV_MSVC_SDK}/crt/lib/x86"
+  "${CIV_MSVC_SDK}/sdk/lib/um/x86" "${CIV_MSVC_SDK}/sdk/lib/ucrt/x86")
+target_link_libraries(TruelyShaderCompiler PRIVATE kernel32.lib msvcrt.lib ucrt.lib vcruntime.lib)
+target_compile_options(TruelyShaderCompiler PRIVATE /W3 /EHsc /utf-8)
+set(TRUELY_SHADER_HEADER "${CMAKE_BINARY_DIR}/generated/WaterShaders.hpp")
+file(GLOB TRUELY_SHADER_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/*.hlsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/*.hlsli")
+add_custom_command(OUTPUT "${TRUELY_SHADER_HEADER}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_BINARY_DIR}/generated"
+  COMMAND "${CMAKE_COMMAND}" -E env WINEDEBUG=-all WINEDLLOVERRIDES=d3dcompiler_47=n
+    "${TRUELY_WINE}" "$<TARGET_FILE:TruelyShaderCompiler>" "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders"
+    "${CMAKE_BINARY_DIR}/generated" "${TRUELY_D3DCOMPILER}"
+  DEPENDS TruelyShaderCompiler src/shaders/ShaderSources.hpp ${TRUELY_SHADER_SOURCES} "${TRUELY_D3DCOMPILER}"
+  VERBATIM)
+add_library(TruelyNoLOD SHARED src/core/TruelyNoLOD.cpp src/core/Allocator.cpp src/ui/Options.cpp
+  src/reflections/WaterReflections.cpp "${TRUELY_SHADER_HEADER}")
+target_include_directories(TruelyNoLOD PRIVATE "${CMAKE_BINARY_DIR}/generated")
 target_include_directories(TruelyNoLOD PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(TruelyNoLOD SYSTEM PRIVATE
   "${DETOURS_SRC}" "${SPORE_SDK}"
@@ -131,10 +156,10 @@ target_compile_options(TruelyNoLOD PRIVATE /W3 /EHsc /utf-8 -fms-extensions -fms
 target_compile_definitions(TruelyNoLOD PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE EA_COMPILER_MSVC=1)
 target_link_directories(TruelyNoLOD PRIVATE "${SPORE_MODAPI_LIB}"
   "${CIV_MSVC_SDK}/crt/lib/x86" "${CIV_MSVC_SDK}/sdk/lib/um/x86" "${CIV_MSVC_SDK}/sdk/lib/ucrt/x86")
-target_link_libraries(TruelyNoLOD PRIVATE SporeModAPI.lib civ_detours kernel32.lib user32.lib msvcrt.lib ucrt.lib vcruntime.lib)
+target_link_libraries(TruelyNoLOD PRIVATE SporeModAPI.lib civ_detours kernel32.lib user32.lib advapi32.lib msvcrt.lib ucrt.lib vcruntime.lib)
 target_link_options(TruelyNoLOD PRIVATE "/map:${CMAKE_BINARY_DIR}/TruelyNoLOD.map")
 set_target_properties(TruelyNoLOD PROPERTIES PREFIX "" SUFFIX ".dll" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-set(CIV_TARGETS civ_detours TruelyNoLOD)
+set(CIV_TARGETS civ_detours TruelyNoLOD TruelyShaderCompiler)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/smoke")
   add_executable(TruelyNoLodSmoke tests/smoke/TruelyNoLodSmoke.cpp)
   target_include_directories(TruelyNoLodSmoke PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${DETOURS_SRC}")
@@ -142,6 +167,28 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/smoke")
   target_link_libraries(TruelyNoLodSmoke PRIVATE civ_detours kernel32.lib user32.lib)
   set_target_properties(TruelyNoLodSmoke PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
   list(APPEND CIV_TARGETS TruelyNoLodSmoke)
+endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/render/MirrorCheck.cpp")
+  add_executable(MirrorCheck tests/render/MirrorCheck.cpp)
+  target_include_directories(MirrorCheck PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  target_include_directories(MirrorCheck SYSTEM PRIVATE "${CIV_MSVC_SDK}/crt/include" "${CIV_MSVC_SDK}/sdk/include/ucrt"
+    "${CIV_MSVC_SDK}/sdk/include/um" "${CIV_MSVC_SDK}/sdk/include/shared")
+  target_link_directories(MirrorCheck PRIVATE "${CIV_MSVC_SDK}/crt/lib/x86" "${CIV_MSVC_SDK}/sdk/lib/um/x86"
+    "${CIV_MSVC_SDK}/sdk/lib/ucrt/x86")
+  target_compile_options(MirrorCheck PRIVATE /W1 /EHsc /utf-8)
+  target_compile_definitions(MirrorCheck PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+  target_link_libraries(MirrorCheck PRIVATE d3d9.lib kernel32.lib user32.lib msvcrt.lib ucrt.lib vcruntime.lib msvcprt.lib)
+  set_target_properties(MirrorCheck PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+  add_executable(WaterShaderCheck tests/render/WaterShaderCheck.cpp)
+  target_include_directories(WaterShaderCheck SYSTEM PRIVATE "${CIV_MSVC_SDK}/crt/include"
+    "${CIV_MSVC_SDK}/sdk/include/ucrt" "${CIV_MSVC_SDK}/sdk/include/um" "${CIV_MSVC_SDK}/sdk/include/shared")
+  target_link_directories(WaterShaderCheck PRIVATE "${CIV_MSVC_SDK}/crt/lib/x86" "${CIV_MSVC_SDK}/sdk/lib/um/x86"
+    "${CIV_MSVC_SDK}/sdk/lib/ucrt/x86")
+  target_compile_options(WaterShaderCheck PRIVATE /W1 /EHsc /utf-8)
+  target_compile_definitions(WaterShaderCheck PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+  target_link_libraries(WaterShaderCheck PRIVATE d3d9.lib kernel32.lib user32.lib msvcrt.lib ucrt.lib vcruntime.lib msvcprt.lib)
+  set_target_properties(WaterShaderCheck PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+  list(APPEND CIV_TARGETS MirrorCheck WaterShaderCheck)
 endif()
 foreach(target ${CIV_TARGETS})
   add_dependencies(${target} layout_guard)

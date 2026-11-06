@@ -6,6 +6,8 @@
 #include "core/Hooks.hpp"
 #include "core/Name.hpp"
 #include "core/Patch.hpp"
+#include "ui/Options.hpp"
+#include "reflections/WaterReflections.hpp"
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
@@ -14,6 +16,7 @@
 namespace ModAPI {
 typedef void (*InitFunction)();
 __declspec(dllimport) void AddPostInitFunction(InitFunction);
+__declspec(dllimport) void AddDisposeFunction(InitFunction);
 }
 
 extern "C" LONG WINAPI DetourTransactionAbort();
@@ -278,6 +281,8 @@ void RaisePlanetQuality() {
     auto setInt = reinterpret_cast<void(__thiscall*)(void*, uint32_t, int)>(At(SetIntAddress));
     auto setFloat = reinterpret_cast<void(__thiscall*)(void*, uint32_t, float)>(At(SetFloatAddress));
     auto setBool = reinterpret_cast<void(__thiscall*)(void*, uint32_t, bool)>(At(SetBoolAddress));
+    if (getBool(props, PlanetReflections))
+        setBool(props, PlanetReflections, false);
     if (getInt(props, PlanetDetailLevel) < PlanetDetailHigh)
         return;
     if (getInt(props, PlanetChunkResolution) < PlanetChunkResolutionValue)
@@ -309,6 +314,8 @@ float Reach(float d, float height, float rise) {
 }
 
 void __fastcall DistGridUpdateHook(void* grid, void*, const float* camera, const void* matrix) {
+    if (WaterReflections::Capturing())
+        return;
     auto* g = static_cast<char*>(grid);
     auto* levels = *reinterpret_cast<float**>(g + DistGridLevels);
     if (levels && camera) {
@@ -440,6 +447,8 @@ __declspec(noinline) void LetEffectsShadowFar() {
 }
 
 void __fastcall ShadowUpdateHook(char* layer, void*) {
+    if (WaterReflections::Capturing())
+        return;
     if (*reinterpret_cast<void**>(layer) == At(ShadowLayerVtable))
         FollowShadowOption(layer);
     shadowUpdate(layer);
@@ -625,6 +634,10 @@ void Init() {
     gameBase = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     bool host = HostMatches();
     int failed = host ? Install() : 0;
+    if (host && !WaterReflections::Install(gameBase))
+        ++failed;
+    if (host)
+        TruelyOptions::Start(gameBase);
     if (host && !failed)
         return;
     const wchar_t* text =
@@ -641,6 +654,7 @@ BOOL WINAPI DllMain(HMODULE h, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(h);
         ModAPI::AddPostInitFunction(Init);
+        ModAPI::AddDisposeFunction(WaterReflections::Shutdown);
     }
     return TRUE;
 }

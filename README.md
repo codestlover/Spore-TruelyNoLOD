@@ -1,16 +1,18 @@
 
-# Truely!NO-LOD
+# Truely!NO-LOD:Enchanted
+
+An edition of Truely!NO-LOD with real reflections in the water of planets. It is the same mod with the same ID, so
+installing it replaces plain Truely!NO-LOD, and the other way round.
+
+This is the `enchanted` branch. Plain Truely!NO-LOD, without the reflections and without an options row, is on the
+[`main`](../../tree/main) branch. Each branch has releases of its own.
 
 A *Spore* mod that turns off the game's level of detail (LOD): models, their materials and the plants on planets are
 drawn in full detail at any distance instead of switching to simpler versions or disappearing as the camera moves
 away.
 
-Current version: **1.1.0**. Download `TruelyNoLOD.sporemod` from the
-[Truely!NO-LOD 1.1.0](../../releases/tag/v1.1.0) release.
-
-This is the `main` branch: the level of detail only, with no options of its own. Truely!NO-LOD:Enchanted, the same mod
-with real reflections in the water of planets and a *Water reflections* row in the graphics options, is on the
-[`enchanted`](../../tree/enchanted) branch. Each branch has releases of its own.
+Current version: **1.0.0**. Download `TruelyNoLOD-Enchanted.sporemod` from the
+[Truely!NO-LOD:Enchanted 1.0.0](../../releases/tag/enchanted-v1.0.0) release.
 
 ## What it changes
 
@@ -54,6 +56,17 @@ Spore lowers detail with distance in several separate places. Truely!NO-LOD chan
   2048x2048, lets every effect cast into both, and keeps the depth the shadow camera covers on the point the camera
   looks at and as deep as the area is wide, so large objects keep their whole shadows. Larger maps are kept. Medium
   keeps the game's own shadows, for a lighter load, and Low turns them off as before.
+- **Water reflections.** Spore's water only shines with the sky from the planet's atmosphere map, and the reflection
+  pass the game has never reaches the water. With *High* in the *Water reflections* row of the graphics options, in
+  every language Spore ships in, Truely!NO-LOD:Enchanted draws the terrain, plants, rocks, buildings, creatures,
+  vehicles and effects once more each frame through a camera mirrored in the water, into a picture and a depth map of
+  its own. For each point of the water the shader then follows the real reflected ray from the curved surface of the
+  planet through that depth map until it meets something, so reflections start where an object meets the water and
+  keep their place all over the visible water, however small the planet. Waves sway the picture; where a ray meets
+  nothing the water shows the sky from the atmosphere map. The mirror image comes in before the fog, under the sun's
+  glitter, and gets stronger toward a grazing view. Nothing more is drawn while no water is in view, high above the
+  planet, or on lava and ice planets. *Low* leaves the water to the game. The setting takes effect at once, is on by
+  default and is kept in `%APPDATA%\TruelyNoLOD\settings.ini`.
 
 Models are still culled when they are outside the view.
 
@@ -80,18 +93,19 @@ frame draws the shadow casters twice, once per cascade, plants and rocks include
 over the whole planet instead of sprites or nothing in the distance, so planets with a lot of plants are the
 heaviest: the frame rate can drop noticeably
 there, in big cities and in the space stage, and entering a planet can take longer. Plant particles load the
-plant's full mesh instead of the reduced one, once per plant type.
+plant's full mesh instead of the reduced one, once per plant type. With *Water reflections* on *High*, every frame
+with water in view draws the scene a second time, plants included, so that view costs noticeably more; *Low* takes all
+of it away at once.
 
 ## Installation
 
 1. Install the [Spore ModAPI Launcher Kit](https://davoonline.com/sporemodder/rob55rod/ModAPI/Public/index.html)
    if you do not have it yet.
-2. Open `TruelyNoLOD.sporemod` with **Spore ModAPI Easy Installer**.
+2. Open `TruelyNoLOD-Enchanted.sporemod` with **Spore ModAPI Easy Installer**.
 3. Start the game with **Spore ModAPI Launcher**. If the game was already running, restart it completely.
 
-To remove the mod, use **Spore ModAPI Easy Uninstaller → Truely!NO-LOD**. The mod stores nothing in saves, so removing it
-simply brings the normal level of detail back. Truely!NO-LOD 1.1.0 adds no options and writes no files; the
-`%APPDATA%\TruelyNoLOD` folder that 1.0.0 kept its water reflections setting in can be deleted.
+To remove the mod, use **Spore ModAPI Easy Uninstaller → Truely!NO-LOD:Enchanted**. The mod stores nothing in saves, so removing it
+simply brings the normal level of detail back; its water reflections setting stays in `%APPDATA%\TruelyNoLOD`.
 
 Truely!NO-LOD supports *Spore Galactic Adventures* with the March 2017 patch (`SporeApp_ModAPIFix.exe`, the version the
 ModAPI Launcher Kit runs). On any other game build it does not change anything and shows a message instead; the
@@ -104,6 +118,12 @@ already at the start of a function Truely!NO-LOD hooks, Truely!NO-LOD puts its h
 both run in any load order. The other changes are made in place inside game functions; Truely!NO-LOD
 checks that code byte for byte first and leaves out only a change whose code something else has changed. It then
 shows a message.
+
+Seamless Water 1.1.0 or newer is linked to it directly. Seamless
+Water builds each of its water shaders a second time with the reflection in it, from the same source, and hands them
+over through the exported function `SeamlessWater_Link`, so a change to its water can never leave the reflections
+behind, and the two mods load in any order. Both sides check a contract number; with an older Seamless Water the water
+keeps its seamless look without reflections. Water shaders the mod does not know are left alone in the same way.
 
 ## How it works
 
@@ -128,6 +148,23 @@ The mod is a 32-bit DLL loaded by the ModAPI Launcher. After the game has starte
 - detours the terrain distribute grid's update to keep its level distances reaching across the ground from height;
 - detours the terrain sphere's setup to raise the planet quality settings in the game's application properties
   first;
+- adds the water reflections row to the graphics options when they open, and keeps the game's own reflection cube
+  switched off, which nothing the water draws ever reads;
+- detours the terrain's pass for water reflection and refraction: after the game's own work there, when water is in
+  view, it draws layer 8 (the terrain, without its water or seabed), the model worlds of layers 10, 12, 13 and 20,
+  the creatures of layers 14 and 21 and the effects of layer 18 through the game's render manager with a camera of
+  its own, mirrored in the tangent plane of the water under the view, with its depth in an INTZ texture, and puts the
+  terrain's camera state back. Layer 13 draws the planet's own model world, with its cities, vehicles, ships and
+  rocks. During that pass the model worlds see no planet horizon and no occluders, which would hide nearly every
+  model from a camera inside the planet; the terrain is clipped at the tangent plane, so the skirts between its
+  chunks, which hang under the water, cannot cover objects in the mirror, and everything else is clipped a little
+  lower, so objects far out on the water keep their hulls;
+- while the terrain draws its water, a hook on Direct3D's indexed draw swaps the water pixel shader for the version
+  with `src/shaders/WaterReflection.hlsli` in it, binds the mirror picture and depth to samplers 6 and 9 and the mirror
+  camera to constants c50 to c54, and puts the device state back after the draw. The shader walks the reflected ray
+  across the mirror picture at most one and a half texels at a time, jumps ahead to the depth it sees when that is
+  closer, and takes a hit behind a surface only where the ray has just crossed it, so thin parts such as masts stay
+  whole and no ghost copies appear beside objects;
 - raises the shadow map sizes in the application properties and has the shadow world make its maps again, as it
   does when its settings change; and
 - detours the curve evaluator so that the shadow world's update reads the widest shadow view, the largest cascade
@@ -149,7 +186,7 @@ The build is the same as for [Civ Challenge](https://github.com/codestlover/Spor
 with `-P`, `git`, `curl`, `unzip`, `tar` and `jq`.
 
 ```sh
-git clone https://github.com/codestlover/Spore-TruelyNoLOD.git && cd Spore-TruelyNoLOD
+git clone -b enchanted https://github.com/codestlover/Spore-TruelyNoLOD.git && cd Spore-TruelyNoLOD
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-clangcl-i686.cmake \
     -DCIV_ACCEPT_MSVC_LICENSE=ON
 cmake --build build
@@ -159,8 +196,13 @@ This produces `build/bin/TruelyNoLOD.dll`. The first `cmake` run downloads the d
 `cmake/setup.sh`: the Spore ModAPI SDK and `SporeModAPI.lib` (v2.5.559), Microsoft Detours v4.0.1 and, with xwin,
 the MSVC CRT and Windows SDK, which come under the Microsoft license and are not redistributed.
 `-DCIV_ACCEPT_MSVC_LICENSE=ON` means you accept that license. If you already prepared these dependencies for Civ
-Challenge, set `CIV_DEPS` to that `deps` folder (an absolute path) before the first `cmake` run to reuse them. With
-CMake 3.27 or newer the build is reproducible and gives the same DLL as the one in the release.
+Challenge, set `CIV_DEPS` to that `deps` folder (an absolute path) before the first `cmake` run to reuse them.
+
+The water shaders in `src/shaders` are compiled during the build by `src/shaders/ShaderCompiler.cpp`, a small
+Windows program that runs under Wine and uses Microsoft's 32-bit `d3dcompiler_47.dll`. That DLL is not
+redistributed: pass its path with `-DTRUELY_D3DCOMPILER=/path/to/x86/d3dcompiler_47.dll` on the first `cmake` run,
+and have `wine` in `PATH`. The release was built with version 10.0.22621.3233. With CMake 3.27 or newer and that
+compiler the build is reproducible and gives the same DLL as the one in the release.
 
 Every text file starts with exactly one empty line and ends with exactly two; `cmake/layout.sh` checks this on each
 build, and `bash cmake/layout.sh --fix` fixes it.
@@ -172,9 +214,16 @@ Releases are checked with tests that are not part of this repository:
 - an emulator suite that runs each piece of the game's own level-of-detail code from `SporeApp_ModAPIFix.exe`
   before and after the change, together with the compiled hooks and the patch table from the released DLL; and
 - a Wine test that installs the hooks and the code changes with the real Windows APIs and chains a hook with
-  another mod's.
+  another mod's; and
+- two Direct3D 9 tests under Wine and DXVK: one draws a scene on a sphere through the mirror camera and compares every
+  pixel of the water with a ray traced reference, and one draws water with all the compiled water shaders and checks
+  that the reflection reaches them and that at strength 0 the picture is the original one.
 
-These checks do not replace playing. The mod has been tried in-game, but not played through every stage.
+The emulator suite also checks that every game function the mirror pass calls pops the arguments the mod passes, and
+runs the pass and the water draw against a recording Direct3D device.
+
+These checks do not replace playing. The mod has been tried in-game, but not played through every stage, and the
+reflections have been seen on a few planets only.
 
 ## Credits and license
 
@@ -185,6 +234,7 @@ Truely!NO-LOD is licensed under **GPL-3.0-or-later** (see [`LICENSE`](LICENSE)).
   GPL-3.0-or-later: the mod links `SporeModAPI.lib`.
 
 Full notices are in [`NOTICE.md`](NOTICE.md) and [`licenses/`](licenses). Spore and Galactic Adventures belong to
-Electronic Arts/Maxis. This repository and the release contain no game executables, game assets, save data or
-decompiled game code.
+Electronic Arts/Maxis. This repository and the release contain no game executables, save data or decompiled game
+code. The water shaders in `src/shaders` are the exception among game assets: they are the game's own water pixel
+shaders, from the shader fragments Spore ships, with the reflection added.
 

@@ -1,5 +1,5 @@
 
-Truely!NO-LOD 1.1.0 is licensed under GPL-3.0-or-later.
+Truely!NO-LOD:Enchanted 1.0.0 is licensed under GPL-3.0-or-later.
 The full license and warranty disclaimer are in LICENSE and licenses/GPL-3.0.txt.
 
 Spore ModAPI SDK: Copyright Eric Mor and contributors; GPL-3.0-or-later.
@@ -23,6 +23,10 @@ src/core/HookChain.hpp and src/core/SdkCompat.hpp come from Civ Challenge by the
 The build scripts in cmake/ are shared with Civ Challenge.
 Source: https://github.com/codestlover/Spore-CivChallenge
 
-Spore and Galactic Adventures are owned by Electronic Arts/Maxis. No game
-executable, assets, save data, or decompiled game code are included in the mod.
+The water shaders in src/shaders are derived from the planet water shader fragments of Spore and Spore Galactic
+Adventures by Maxis/Electronic Arts, with the reflection added. The game's code and assets remain the property of
+their rights holders; the license above covers the changes and the rest of this project.
+
+Spore and Galactic Adventures are owned by Electronic Arts/Maxis. No game executable, save data or decompiled game
+code are included in the mod.
 
