@@ -119,7 +119,7 @@ both run in any load order. The other changes are made in place inside game func
 checks that code byte for byte first and leaves out only a change whose code something else has changed. It then
 shows a message.
 
-Seamless Water 1.1.0 or newer is linked to it directly. Seamless
+[Seamless Water](https://github.com/codestlover/Spore-SeamlessWater) 1.1.0 or newer is linked to it directly. Seamless
 Water builds each of its water shaders a second time with the reflection in it, from the same source, and hands them
 over through the exported function `SeamlessWater_Link`, so a change to its water can never leave the reflections
 behind, and the two mods load in any order. Both sides check a contract number; with an older Seamless Water the water

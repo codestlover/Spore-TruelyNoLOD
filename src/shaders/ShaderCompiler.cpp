@@ -10,7 +10,7 @@ class ShaderInclude final : public ID3DInclude {
 public:
     explicit ShaderInclude(const wchar_t* directory) : folder(directory) {}
 
-    HRESULT __stdcall Open(D3D_INCLUDE_TYPE, LPCSTR name, LPCVOID, LPCVOID* data, UINT* bytes) override {
+    HRESULT __stdcall Open(D3D_INCLUDE_TYPE, LPCSTR name, LPCVOID, LPCVOID* data, UINT* bytes) noexcept override {
         wchar_t path[2048];
         swprintf_s(path, L"%s/%hs", folder, name);
         HANDLE file =
@@ -28,7 +28,7 @@ public:
         return S_OK;
     }
 
-    HRESULT __stdcall Close(LPCVOID data) override {
+    HRESULT __stdcall Close(LPCVOID data) noexcept override {
         HeapFree(GetProcessHeap(), 0, const_cast<void*>(data));
         return S_OK;
     }
@@ -51,10 +51,8 @@ int wmain(int argc, wchar_t** argv) {
     if (argc != 4)
         return 2;
     HMODULE library = LoadLibraryW(argv[3]);
-    if (!library) {
-        fprintf(stderr, "Cannot load 32-bit Microsoft D3DCompiler: %lu\n", GetLastError());
+    if (!library)
         return 3;
-    }
     auto compile = reinterpret_cast<pD3DCompile>(GetProcAddress(library, "D3DCompile"));
     if (!compile)
         return 3;
@@ -72,7 +70,6 @@ int wmain(int argc, wchar_t** argv) {
         HANDLE file =
             CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (file == INVALID_HANDLE_VALUE) {
-            fprintf(stderr, "Cannot open shader %s\n", s.name);
             fclose(header);
             return 5;
         }
@@ -93,12 +90,9 @@ int wmain(int argc, wchar_t** argv) {
         if (messages) {
             swprintf_s(path, L"%s/%hs.compiler.txt", argv[2], s.name);
             Write(path, messages->GetBufferPointer(), DWORD(messages->GetBufferSize()));
-            if (FAILED(hr))
-                fwrite(messages->GetBufferPointer(), 1, messages->GetBufferSize(), stderr);
             messages->Release();
         }
         if (FAILED(hr) || !code) {
-            fprintf(stderr, "Shader failed: %s\n", s.name);
             fclose(header);
             return 6;
         }
@@ -115,7 +109,6 @@ int wmain(int argc, wchar_t** argv) {
             fprintf(header, "%s%lu", n ? "," : "", words[n]);
         fprintf(header, "};\n");
         code->Release();
-        printf("%s %s: %u bytes\n", s.name, s.profile, sizes[i]);
     }
     fprintf(header, "static const PixelCase kPixelCases[] = {\n");
     for (unsigned i = 0; i < _countof(kSources); ++i) {
