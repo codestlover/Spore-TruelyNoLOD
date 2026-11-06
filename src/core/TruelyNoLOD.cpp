@@ -6,7 +6,6 @@
 #include "core/Hooks.hpp"
 #include "core/Name.hpp"
 #include "core/Patch.hpp"
-#include "ui/Options.hpp"
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
@@ -279,9 +278,6 @@ void RaisePlanetQuality() {
     auto setInt = reinterpret_cast<void(__thiscall*)(void*, uint32_t, int)>(At(SetIntAddress));
     auto setFloat = reinterpret_cast<void(__thiscall*)(void*, uint32_t, float)>(At(SetFloatAddress));
     auto setBool = reinterpret_cast<void(__thiscall*)(void*, uint32_t, bool)>(At(SetBoolAddress));
-    bool wanted = TruelyOptions::Reflections();
-    if (getBool(props, PlanetReflections) != wanted)
-        setBool(props, PlanetReflections, wanted);
     if (getInt(props, PlanetDetailLevel) < PlanetDetailHigh)
         return;
     if (getInt(props, PlanetChunkResolution) < PlanetChunkResolutionValue)
@@ -629,8 +625,6 @@ void Init() {
     gameBase = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     bool host = HostMatches();
     int failed = host ? Install() : 0;
-    if (host)
-        TruelyOptions::Start(gameBase);
     if (host && !failed)
         return;
     const wchar_t* text =

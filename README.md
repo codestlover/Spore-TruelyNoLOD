@@ -5,7 +5,12 @@ A *Spore* mod that turns off the game's level of detail (LOD): models, their mat
 drawn in full detail at any distance instead of switching to simpler versions or disappearing as the camera moves
 away.
 
-Current version: **1.0.0**. Download `TruelyNoLOD.sporemod` from the [Releases](../../releases) page.
+Current version: **1.1.0**. Download `TruelyNoLOD.sporemod` from the
+[Truely!NO-LOD 1.1.0](../../releases/tag/v1.1.0) release.
+
+This is the `main` branch: the level of detail only, with no options of its own. Truely!NO-LOD:Enchanted, the same mod
+with real reflections in the water of planets and a *Water reflections* row in the graphics options, is on the
+[`enchanted`](../../tree/enchanted) branch. Each branch has releases of its own.
 
 ## What it changes
 
@@ -49,10 +54,6 @@ Spore lowers detail with distance in several separate places. Truely!NO-LOD chan
   2048x2048, lets every effect cast into both, and keeps the depth the shadow camera covers on the point the camera
   looks at and as deep as the area is wide, so large objects keep their whole shadows. Larger maps are kept. Medium
   keeps the game's own shadows, for a lighter load, and Low turns them off as before.
-- **Water reflections.** The graphics options get a *Water reflections* row, in every language Spore ships in: under
-  *High* planets draw reflections on their water, which the game otherwise leaves off; under *Low* they don't. It
-  takes effect at once, is on by default and is kept in `%APPDATA%\TruelyNoLOD\settings.ini`. Reflections cost about
-  a sixth of a frame on a planet with water.
 
 Models are still culled when they are outside the view.
 
@@ -89,7 +90,8 @@ plant's full mesh instead of the reduced one, once per plant type.
 3. Start the game with **Spore ModAPI Launcher**. If the game was already running, restart it completely.
 
 To remove the mod, use **Spore ModAPI Easy Uninstaller → Truely!NO-LOD**. The mod stores nothing in saves, so removing it
-simply brings the normal level of detail back; its water reflections setting stays in `%APPDATA%\TruelyNoLOD`.
+simply brings the normal level of detail back. Truely!NO-LOD 1.1.0 adds no options and writes no files; the
+`%APPDATA%\TruelyNoLOD` folder that 1.0.0 kept its water reflections setting in can be deleted.
 
 Truely!NO-LOD supports *Spore Galactic Adventures* with the March 2017 patch (`SporeApp_ModAPIFix.exe`, the version the
 ModAPI Launcher Kit runs). On any other game build it does not change anything and shows a message instead; the
@@ -126,8 +128,6 @@ The mod is a 32-bit DLL loaded by the ModAPI Launcher. After the game has starte
 - detours the terrain distribute grid's update to keep its level distances reaching across the ground from height;
 - detours the terrain sphere's setup to raise the planet quality settings in the game's application properties
   first;
-- adds the water reflections row to the graphics options when they open and sets the reflections switch the
-  terrain reads every frame;
 - raises the shadow map sizes in the application properties and has the shadow world make its maps again, as it
   does when its settings change; and
 - detours the curve evaluator so that the shadow world's update reads the widest shadow view, the largest cascade

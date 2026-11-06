@@ -1,5 +1,5 @@
 
-Truely!NO-LOD 1.0.0 is licensed under GPL-3.0-or-later.
+Truely!NO-LOD 1.1.0 is licensed under GPL-3.0-or-later.
 The full license and warranty disclaimer are in LICENSE and licenses/GPL-3.0.txt.
 
 Spore ModAPI SDK: Copyright Eric Mor and contributors; GPL-3.0-or-later.

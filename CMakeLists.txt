@@ -26,15 +26,12 @@ foreach(CIV_PATH_VARIABLE CIV_DEPS CIV_MSVC_SDK)
   endif()
 endforeach()
 option(CIV_ACCEPT_MSVC_LICENSE "Accept the Microsoft license and download the MSVC CRT and Windows SDK with xwin" OFF)
-# The dependencies must exist before project() because its compiler check links against the MSVC libraries.
-# cmake/setup.sh runs when something is missing or when deps/.setup-stamp was written by another version of it.
 set(CIV_MSVC_TREE "${CIV_DEPS}/msvc-sdk")
 set(CIV_MSVC_EXTERNAL "")
 if(NOT "${CIV_MSVC_SDK}" STREQUAL "")
   set(CIV_MSVC_EXTERNAL "${CIV_MSVC_SDK}")
   set(CIV_MSVC_TREE "${CIV_MSVC_SDK}")
 endif()
-# The toolchain bakes the MSVC paths into the cached compiler flags when project() first runs.
 if(EXISTS "${CMAKE_BINARY_DIR}/CMakeCache.txt" AND DEFINED CACHE{CMAKE_CXX_FLAGS})
   string(FIND "${CMAKE_CXX_FLAGS}" "/imsvc \"${CIV_MSVC_TREE}/crt/include\"" CIV_FLAGS_TREE)
   if(CIV_FLAGS_TREE EQUAL -1)
@@ -117,7 +114,6 @@ endif()
 add_custom_target(layout_guard ALL COMMAND "${CIV_BASH}" "${CIV_LAYOUT_GUARD}" --skip "${CMAKE_BINARY_DIR}" --skip "${CIV_DEPS}"
   --skip "${CIV_MSVC_SDK}"
   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
-# No build-machine paths in __FILE__ and a content-derived PE timestamp instead of the build time.
 add_compile_options("/clang:-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/=" /Brepro)
 add_link_options(/Brepro)
 set(DETOURS_SRC "${CIV_DEPS}/Detours/src")
@@ -125,7 +121,7 @@ add_library(civ_detours STATIC "${DETOURS_SRC}/detours.cpp" "${DETOURS_SRC}/modu
   "${DETOURS_SRC}/disasm.cpp" "${DETOURS_SRC}/image.cpp" "${DETOURS_SRC}/creatwth.cpp")
 target_compile_definitions(civ_detours PRIVATE WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0601)
 target_compile_options(civ_detours PRIVATE /W1 /EHsc)
-add_library(TruelyNoLOD SHARED src/core/TruelyNoLOD.cpp src/core/Allocator.cpp src/ui/Options.cpp)
+add_library(TruelyNoLOD SHARED src/core/TruelyNoLOD.cpp src/core/Allocator.cpp)
 target_include_directories(TruelyNoLOD PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_include_directories(TruelyNoLOD SYSTEM PRIVATE
   "${DETOURS_SRC}" "${SPORE_SDK}"
@@ -139,7 +135,6 @@ target_link_libraries(TruelyNoLOD PRIVATE SporeModAPI.lib civ_detours kernel32.l
 target_link_options(TruelyNoLOD PRIVATE "/map:${CMAKE_BINARY_DIR}/TruelyNoLOD.map")
 set_target_properties(TruelyNoLOD PROPERTIES PREFIX "" SUFFIX ".dll" RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CIV_TARGETS civ_detours TruelyNoLOD)
-# The Wine smoke test is private; it is built only when tests/smoke is present.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/smoke")
   add_executable(TruelyNoLodSmoke tests/smoke/TruelyNoLodSmoke.cpp)
   target_include_directories(TruelyNoLodSmoke PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${DETOURS_SRC}")
