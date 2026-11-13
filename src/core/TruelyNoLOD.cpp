@@ -356,6 +356,8 @@ bool ShadowsHigh(void* props) {
     return getBool(props, ShadowEnabled) && getBool(props, ShadowNestedMaps);
 }
 
+// Only the shadow map grows: the basis map keeps the game's size, since with any other basis size (1024 and 2048
+// tried) the editors' Paint mode shows the creation black.
 void SetShadowMapSizes(void* props, int map, int basis) {
     auto setInt = reinterpret_cast<void(__thiscall*)(void*, uint32_t, int)>(At(SetIntAddress));
     setInt(props, ShadowMapSize, map);
@@ -389,8 +391,7 @@ __declspec(noinline) void FollowShadowOption(char* layer) {
         return;
     shadowsHigh = high;
     if (high)
-        SetShadowMapSizes(props, gameMapSize > ShadowMapSizeValue ? gameMapSize : ShadowMapSizeValue,
-                          gameBasisSize > ShadowMapSizeValue ? gameBasisSize : ShadowMapSizeValue);
+        SetShadowMapSizes(props, gameMapSize > ShadowMapSizeValue ? gameMapSize : ShadowMapSizeValue, gameBasisSize);
     else
         SetShadowMapSizes(props, gameMapSize, gameBasisSize);
     SetEffectsFar(layer, high);
@@ -423,10 +424,9 @@ __declspec(noinline) bool RaiseShadowMaps() {
     shadowsHigh = ShadowsHigh(props);
     if (!shadowsHigh)
         return true;
-    if (gameMapSize >= ShadowMapSizeValue && gameBasisSize >= ShadowMapSizeValue)
+    if (gameMapSize >= ShadowMapSizeValue)
         return true;
-    SetShadowMapSizes(props, gameMapSize > ShadowMapSizeValue ? gameMapSize : ShadowMapSizeValue,
-                      gameBasisSize > ShadowMapSizeValue ? gameBasisSize : ShadowMapSizeValue);
+    SetShadowMapSizes(props, ShadowMapSizeValue, gameBasisSize);
     if (shadows && *reinterpret_cast<void**>(shadows + ShadowTargets))
         RemakeShadowMaps(shadows);
     return true;

@@ -52,8 +52,9 @@ Spore lowers detail with distance in several separate places. Truely!NO-LOD chan
   lowers their detail with distance: close up it narrows the area they cover, so shadows are cut off at its edges;
   far away it drops the detail of the inner cascade and, below a threshold, the outer cascade altogether; and plants
   and rocks placed by effects cast into the outer cascade only when they are marked for it. Truely!NO-LOD gives both
-  cascades the widest area and the most detail the game uses at any camera distance, makes the shadow maps
-  2048x2048, lets every effect cast into both, and keeps the depth the shadow camera covers on the point the camera
+  cascades the widest area and the most detail the game uses at any camera distance, makes the shadow map
+  2048x2048 (the basis map keeps the game's size: with any other size the editors' Paint mode shows the creation
+  black), lets every effect cast into both, and keeps the depth the shadow camera covers on the point the camera
   looks at and as deep as the area is wide, so large objects keep their whole shadows. Larger maps are kept. Medium
   keeps the game's own shadows, for a lighter load, and Low turns them off as before.
 - **Water reflections.** Spore's water only shines with the sky from the planet's atmosphere map, and the reflection
@@ -88,7 +89,7 @@ Models are still culled when they are outside the view.
 ## Performance
 
 Detailed meshes, detailed materials and the models and effects that used to vanish in the distance are now drawn
-as well, so the video card has more to do; the larger shadow maps take about 70 MB of video memory, and every
+as well, so the video card has more to do; the larger shadow map takes extra video memory, and every
 frame draws the shadow casters twice, once per cascade, plants and rocks included. Plants and rocks are drawn as full models and grass at full density
 over the whole planet instead of sprites or nothing in the distance, so planets with a lot of plants are the
 heaviest: the frame rate can drop noticeably
@@ -165,8 +166,8 @@ The mod is a 32-bit DLL loaded by the ModAPI Launcher. After the game has starte
   across the mirror picture at most one and a half texels at a time, jumps ahead to the depth it sees when that is
   closer, and takes a hit behind a surface only where the ray has just crossed it, so thin parts such as masts stay
   whole and no ghost copies appear beside objects;
-- raises the shadow map sizes in the application properties and has the shadow world make its maps again, as it
-  does when its settings change; and
+- raises the shadow map size (not the basis map's) in the application properties and has the shadow world make
+  its maps again, as it does when its settings change; and
 - detours the curve evaluator so that the shadow world's update reads the widest shadow view, the largest cascade
   zoom and the strength the game has close up at any camera distance, and keeps casters at least as deep as the
   widest view's half width; makes the shadow world's effects registration flag effects for both cascades alike; and
