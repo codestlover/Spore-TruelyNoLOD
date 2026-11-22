@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <Spore/ModAPI.h>
 #include "core/SdkCompat.hpp"
+#include "core/GameCode.hpp"
 #include "core/Hooks.hpp"
 #include "ui/Options.hpp"
 #include <Spore/App/IMessageManager.h>
@@ -157,7 +158,7 @@ const char16_t* CaptionFor(const char16_t* code, unsigned length) {
 }
 
 const char16_t* ReflectionsCaption() {
-    if (!memcmp(At(LocaleManagerAddress), LocaleManagerBytes, sizeof(LocaleManagerBytes) - 1))
+    if (GameCode::Is(LocaleManagerAddress, LocaleManagerBytes, sizeof(LocaleManagerBytes) - 1))
         if (auto* manager = reinterpret_cast<App::cLocaleManager* (*)()>(At(LocaleManagerAddress))()) {
             const auto& code = manager->GetActiveLanguage();
             if (const char16_t* text = CaptionFor(code.c_str(), unsigned(code.size())))

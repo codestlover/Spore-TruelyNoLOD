@@ -11,8 +11,8 @@ A *Spore* mod that turns off the game's level of detail (LOD): models, their mat
 drawn in full detail at any distance instead of switching to simpler versions or disappearing as the camera moves
 away.
 
-Current version: **1.0.0**. Download `TruelyNoLOD-Enchanted.sporemod` from the
-[Truely!NO-LOD:Enchanted 1.0.0](../../releases/tag/enchanted-v1.0.0) release.
+Current version: **1.0.2**. Download `TruelyNoLOD-Enchanted.sporemod` from the
+[Truely!NO-LOD:Enchanted 1.0.2](../../releases/tag/enchanted-v1.0.2) release.
 
 ## What it changes
 
@@ -109,8 +109,10 @@ To remove the mod, use **Spore ModAPI Easy Uninstaller → Truely!NO-LOD:Enchant
 simply brings the normal level of detail back; its water reflections setting stays in `%APPDATA%\TruelyNoLOD`.
 
 Truely!NO-LOD supports *Spore Galactic Adventures* with the March 2017 patch (`SporeApp_ModAPIFix.exe`, the version the
-ModAPI Launcher Kit runs). On any other game build it does not change anything and shows a message instead; the
-game then runs with its normal level of detail.
+ModAPI Launcher Kit runs, and the `SporeApp.exe` of the Steam copy, the same game build). It works on Windows as well
+as under Wine: Windows usually loads the game at another address than the one it was built for (ASLR), on Steam, EA
+app and GOG copies alike, and since Truely!NO-LOD:Enchanted 1.0.2 the mod follows it there. On any other game build
+it does not change anything and shows a message instead; the game then runs with its normal level of detail.
 
 ## Other mods
 
@@ -174,7 +176,11 @@ The mod is a 32-bit DLL loaded by the ModAPI Launcher. After the game has starte
   sets the factor that keeps the shadow camera's depth range on the point the camera looks
   at, which the game leaves at 0.
 
-The addresses and original bytes are in [`src/core/Hooks.hpp`](src/core/Hooks.hpp).
+The addresses and original bytes are in [`src/core/Hooks.hpp`](src/core/Hooks.hpp). The addresses are the game's at
+the base it was built for, 0x400000; where Windows loads the game at another base (ASLR), the mod moves every address
+by the same amount. The loader then has also moved the absolute addresses inside the game's code, so the mod reads the
+code it checks as the executable file has it, those addresses moved back through the executable's relocation table
+([`src/core/Relocation.hpp`](src/core/Relocation.hpp)).
 
 ## Building from source (Linux)
 
@@ -213,12 +219,15 @@ build, and `bash cmake/layout.sh --fix` fixes it.
 Releases are checked with tests that are not part of this repository:
 
 - an emulator suite that runs each piece of the game's own level-of-detail code from `SporeApp_ModAPIFix.exe`
-  before and after the change, together with the compiled hooks and the patch table from the released DLL; and
+  before and after the change, together with the compiled hooks and the patch table from the released DLL;
 - a Wine test that installs the hooks and the code changes with the real Windows APIs and chains a hook with
-  another mod's; and
+  another mod's;
 - two Direct3D 9 tests under Wine and DXVK: one draws a scene on a sphere through the mirror camera and compares every
   pixel of the water with a ray traced reference, and one draws water with all the compiled water shaders and checks
-  that the reflection reaches them and that at strength 0 the picture is the original one.
+  that the reflection reaches them and that at strength 0 the picture is the original one; and
+- a relocation check that maps `SporeApp_ModAPIFix.exe` and Steam's `SporeApp.exe` (its code decrypted) at 0x400000
+  and at moved bases, with the executable's relocations applied as Windows applies them, and reads every piece of
+  code the mod checks, the water reflections' and the options row's included, with the DLL's own reading code.
 
 The emulator suite also checks that every game function the mirror pass calls pops the arguments the mod passes, and
 runs the pass and the water draw against a recording Direct3D device.

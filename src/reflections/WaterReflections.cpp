@@ -7,6 +7,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include "core/GameCode.hpp"
 #include "core/HookChain.hpp"
 #include "core/Hooks.hpp"
 #include "reflections/PlanarMath.hpp"
@@ -596,7 +597,7 @@ bool Vtable(void** slot, void* value) {
 
 template <class Fn> bool Hook(uint32_t address, const unsigned char* expected, Fn& original, void* detour) {
     void* code = At(address);
-    if (!memcmp(code, expected, 16)) {
+    if (GameCode::Is(address, expected, 16)) {
         original = reinterpret_cast<Fn>(code);
         LONG result = DetourTransactionBegin();
         if (!result)
@@ -609,7 +610,7 @@ template <class Fn> bool Hook(uint32_t address, const unsigned char* expected, F
         }
         return DetourTransactionCommit() == NO_ERROR;
     }
-    uintptr_t next = HookChain::ForeignTarget(code, base, HostImageSize);
+    uintptr_t next = HookChain::ForeignTarget(code, base, GameCode::ImageSize());
     if (!next)
         return false;
     original = reinterpret_cast<Fn>(next);
