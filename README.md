@@ -5,8 +5,8 @@ A *Spore* mod that turns off the game's level of detail (LOD): models, their mat
 drawn in full detail at any distance instead of switching to simpler versions or disappearing as the camera moves
 away.
 
-Current version: **1.1.0**. Download `TruelyNoLOD.sporemod` from the
-[Truely!NO-LOD 1.1.0](../../releases/tag/v1.1.0) release.
+Current version: **1.1.2**. Download `TruelyNoLOD.sporemod` from the
+[Truely!NO-LOD 1.1.2](../../releases/tag/v1.1.2) release.
 
 This is the `main` branch: the level of detail only, with no options of its own. Truely!NO-LOD:Enchanted, the same mod
 with real reflections in the water of planets and a *Water reflections* row in the graphics options, is on the
@@ -95,8 +95,10 @@ simply brings the normal level of detail back. Truely!NO-LOD 1.1.0 adds no optio
 `%APPDATA%\TruelyNoLOD` folder that 1.0.0 kept its water reflections setting in can be deleted.
 
 Truely!NO-LOD supports *Spore Galactic Adventures* with the March 2017 patch (`SporeApp_ModAPIFix.exe`, the version the
-ModAPI Launcher Kit runs). On any other game build it does not change anything and shows a message instead; the
-game then runs with its normal level of detail.
+ModAPI Launcher Kit runs, and the `SporeApp.exe` of the Steam copy, the same game build). It works on Windows as well
+as under Wine: Windows usually loads the game at another address than the one it was built for (ASLR), on Steam, EA
+app and GOG copies alike, and since 1.1.2 the mod follows it there. On any other game build it does not change
+anything and shows a message instead; the game then runs with its normal level of detail.
 
 ## Other mods
 
@@ -137,7 +139,11 @@ The mod is a 32-bit DLL loaded by the ModAPI Launcher. After the game has starte
   sets the factor that keeps the shadow camera's depth range on the point the camera looks
   at, which the game leaves at 0.
 
-The addresses and original bytes are in [`src/core/Hooks.hpp`](src/core/Hooks.hpp).
+The addresses and original bytes are in [`src/core/Hooks.hpp`](src/core/Hooks.hpp). The addresses are the game's at
+the base it was built for, 0x400000; where Windows loads the game at another base (ASLR), the mod moves every address
+by the same amount. The loader then has also moved the absolute addresses inside the game's code, so the mod reads the
+code it checks as the executable file has it, those addresses moved back through the executable's relocation table
+([`src/core/Relocation.hpp`](src/core/Relocation.hpp)).
 
 ## Building from source (Linux)
 
@@ -171,9 +177,12 @@ build, and `bash cmake/layout.sh --fix` fixes it.
 Releases are checked with tests that are not part of this repository:
 
 - an emulator suite that runs each piece of the game's own level-of-detail code from `SporeApp_ModAPIFix.exe`
-  before and after the change, together with the compiled hooks and the patch table from the released DLL; and
+  before and after the change, together with the compiled hooks and the patch table from the released DLL;
 - a Wine test that installs the hooks and the code changes with the real Windows APIs and chains a hook with
-  another mod's.
+  another mod's; and
+- a relocation check that maps `SporeApp_ModAPIFix.exe` and Steam's `SporeApp.exe` (its code decrypted) at 0x400000
+  and at moved bases, with the executable's relocations applied as Windows applies them, and reads every piece of
+  code the mod checks with the DLL's own reading code.
 
 These checks do not replace playing. The mod has been tried in-game, but not played through every stage.
 

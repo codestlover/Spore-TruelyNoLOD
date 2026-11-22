@@ -6,6 +6,7 @@
 #include "core/Hooks.hpp"
 #include "core/Name.hpp"
 #include "core/Patch.hpp"
+#include "core/Relocation.hpp"
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
@@ -20,6 +21,9 @@ extern "C" LONG WINAPI DetourTransactionAbort();
 
 namespace {
 uintptr_t gameBase;
+uint32_t gameSize, gameShift;
+const unsigned char* relocations;
+size_t relocationsSize;
 using SetLodFn = void(__thiscall*)(void*, void*, int);
 using EffectLevelFn = void(__thiscall*)(void*, void*, int, int);
 using ModelBatchFn = int(__thiscall*)(void*, void*, const uint32_t*, int*);
@@ -505,12 +509,25 @@ float __cdecl CurveHook(int count, const float* points, float input) {
 bool HostMatches() {
     auto* dos = reinterpret_cast<IMAGE_DOS_HEADER*>(gameBase);
     auto* nt = reinterpret_cast<IMAGE_NT_HEADERS*>(gameBase + dos->e_lfanew);
-    return nt->FileHeader.Machine == IMAGE_FILE_MACHINE_I386 && nt->OptionalHeader.SizeOfImage == HostImageSize &&
-           nt->FileHeader.TimeDateStamp == HostTimestamp;
+    gameSize = nt->OptionalHeader.SizeOfImage;
+    if (nt->FileHeader.Machine != IMAGE_FILE_MACHINE_I386 ||
+        (gameSize != HostImageSize && gameSize != SteamHostImageSize) || nt->FileHeader.TimeDateStamp != HostTimestamp)
+        return false;
+    const auto& table = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+    if (table.VirtualAddress && table.Size <= gameSize && table.VirtualAddress <= gameSize - table.Size) {
+        relocations = reinterpret_cast<const unsigned char*>(gameBase + table.VirtualAddress);
+        relocationsSize = table.Size;
+    }
+    return true;
 }
 
 bool Same(uint32_t address, const char* expected, size_t size) {
-    return !memcmp(At(address), expected, size);
+    unsigned char code[MaxCheckedSize];
+    if (size > sizeof(code))
+        return false;
+    Relocation::ReadAsFile(reinterpret_cast<const unsigned char*>(gameBase), relocations, relocationsSize, gameShift,
+                           address, code, size);
+    return !memcmp(code, expected, size);
 }
 
 __declspec(noinline) bool Matches(const BytePatch& p) {
@@ -527,7 +544,7 @@ __declspec(noinline) void Undo(const BytePatch& p) {
 
 bool Hook(uint32_t address, const char* expected, size_t size, void** original, void* detour, bool chainable) {
     auto* code = At(address);
-    if (!memcmp(code, expected, size)) {
+    if (Same(address, expected, size)) {
         *original = code;
         LONG err = DetourTransactionBegin();
         if (err == NO_ERROR)
@@ -541,7 +558,7 @@ bool Hook(uint32_t address, const char* expected, size_t size, void** original, 
         }
         return err == NO_ERROR;
     }
-    uintptr_t next = chainable ? HookChain::ForeignTarget(code, gameBase, HostImageSize) : 0;
+    uintptr_t next = chainable ? HookChain::ForeignTarget(code, gameBase, gameSize) : 0;
     if (next) {
         *original = reinterpret_cast<void*>(next);
         return HookChain::JumpTo(code, detour);
@@ -623,6 +640,7 @@ int Install() {
 
 void Init() {
     gameBase = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    gameShift = uint32_t(gameBase - Relocation::PreferredBase);
     bool host = HostMatches();
     int failed = host ? Install() : 0;
     if (host && !failed)
@@ -630,7 +648,7 @@ void Init() {
     const wchar_t* text =
         !host ? L"" TRUELY_NO_LOD_NAME " could not start: this version of Spore is not supported. The game keeps its "
                 L"normal level of detail.\n\n" TRUELY_NO_LOD_NAME " supports only Spore Galactic Adventures with the "
-                L"March 2017 patch (SporeApp_ModAPIFix.exe)."
+                L"March 2017 patch (SporeApp_ModAPIFix.exe, or Steam's SporeApp.exe)."
               : L"" TRUELY_NO_LOD_NAME " started only partly: another mod has already changed some of the same game "
                 L"code, which keeps its normal level of detail.";
     MessageBoxW(nullptr, text, ModNameWide, MB_OK | MB_ICONERROR);

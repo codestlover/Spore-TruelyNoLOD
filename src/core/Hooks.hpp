@@ -4,6 +4,8 @@
 #include <cstdint>
 
 constexpr unsigned HostImageSize = 26271744;
+// Steam's SporeApp.exe is the same build with SteamStub's section on top: the same time stamp, a larger image.
+constexpr unsigned SteamHostImageSize = 26443776;
 constexpr unsigned HostTimestamp = 1727737552;
 
 constexpr uint32_t SetLodAddress = 0x744cf0;
@@ -117,6 +119,16 @@ static_assert(sizeof(EffectLevelBytes) == 17 && sizeof(ModelBatchBytes) == 17 &&
                   sizeof(ShadowUpdateBytes) == 17,
               "Hook table");
 
+constexpr size_t MaxCheckedSize = 128;
+static_assert(LodBlockSize <= MaxCheckedSize && sizeof(HiMeshUpdateBytes) - 1 <= MaxCheckedSize &&
+                  sizeof(HiMeshDrawBytes) - 1 <= MaxCheckedSize &&
+                  sizeof(MaterialLodBlockBytes) - 1 <= MaxCheckedSize &&
+                  sizeof(EffectRangeBlockBytes) - 1 <= MaxCheckedSize &&
+                  sizeof(ShadowEffectsBlockBytes) - 1 <= MaxCheckedSize,
+              "Every checked block fits the check's buffer");
+
+// No patch covers a byte of a dword the game's relocation table names, so a patch and its original bytes are the
+// same at any base.
 struct BytePatch {
     uint32_t block;
     const char* expected;
